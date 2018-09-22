@@ -1,0 +1,8 @@
+[package]
+name = "hyphen"
+version = "0.0.1"
+authors = ["Michael A. Plikk <michael@plikk.com>"]
+edition = "2018"
+
+[dependencies]
+fnv = "*"
