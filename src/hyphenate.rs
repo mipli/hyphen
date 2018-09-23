@@ -12,6 +12,9 @@ pub trait Hyphenate<'a> {
 
 impl<'a> Hyphenate<'a> for &'a str {
     fn possibilities_word(self, corpus: &Corpus) -> Vec<usize> {
+        if let Some(splits) = corpus.get_exception(self) {
+            return splits.clone();
+        }
         let mut chars = self.chars().collect::<Vec<_>>();
         chars.insert(0, '.');
         chars.push('.');
@@ -125,5 +128,13 @@ mod tests {
         let corpus = Corpus::from_string(".as4df s9d asd4f");
         let hyphenator = "asdf".mark(&corpus);
         assert_eq!(hyphenator.hyphenate(), "asd\u{ad}f");
+    }
+
+    #[test]
+    fn exceptions() {
+        let mut corpus = Corpus::from_string(".as4df s9d asd4f");
+        corpus.add_exception("a-sdf");
+        let hyphenator = "asdf fasdf".mark(&corpus);
+        assert_eq!(hyphenator.hyphenate(), "a\u{ad}sdf fasd\u{ad}f");
     }
 }

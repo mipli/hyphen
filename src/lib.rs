@@ -1,3 +1,3 @@
 mod trie;
-mod corpus;
+pub mod corpus;
 pub mod hyphenate;
