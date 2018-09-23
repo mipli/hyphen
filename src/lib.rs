@@ -1,4 +1,3 @@
 mod trie;
-mod hyphen;
-
-pub use crate::hyphen::{Hyphen};
+mod corpus;
+pub mod hyphenate;
