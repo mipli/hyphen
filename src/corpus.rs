@@ -21,9 +21,11 @@ impl Corpus {
         let file = File::open(path)?;
         let mut buf_reader = BufReader::new(file);
         let mut line = String::new();
-        let mut patterns = Trie::default();
-        let mut exceptions = FnvHashMap::default();
         let mut mode = TexParseMode::Init;
+        let mut corpus = Corpus {
+            patterns: Trie::default(),
+            exceptions: FnvHashMap::default()
+        };
         while let Ok(len) = buf_reader.read_line(&mut line) {
             if len == 0 {
                 break;
@@ -36,35 +38,30 @@ impl Corpus {
             } else if tline.starts_with("}") {
                 mode = TexParseMode::Init;
             } else if mode == TexParseMode::Patterns && !tline.starts_with("#") {
-                patterns.insert(&tline);
+                corpus.add_pattern(&tline);
             } else if mode == TexParseMode::Exceptions && !tline.starts_with("#") {
-                let indices = tline.to_string().char_indices().filter_map(|(index, c)| {
-                    if c == '-' {
-                        Some(index)
-                    } else {
-                        None
-                    }
-                }).collect::<Vec<_>>();
-                exceptions.insert(tline.to_string().replace("-", ""), indices);
+                corpus.add_exception(&tline);
             }
             line.truncate(0);
         }
 
-        Ok(Corpus {
-            patterns,
-            exceptions
-        })
+        Ok(corpus)
+    }
+
+    pub fn add_pattern(&mut self, pattern: &str) {
+        self.patterns.insert(pattern);
     }
 
     pub fn add_exception(&mut self, word: &str) {
-        let indices = word.to_string().char_indices().filter_map(|(index, c)| {
+        let word = word.to_string();
+        let indices = word.char_indices().filter_map(|(index, c)| {
             if c == '-' {
                 Some(index)
             } else {
                 None
             }
         }).collect::<Vec<_>>();
-        self.exceptions.insert(word.to_string().replace("-", ""), indices);
+        self.exceptions.insert(word.replace("-", ""), indices);
     }
 
     pub fn from_file(path: &str) -> Result<Self, std::io::Error> {
