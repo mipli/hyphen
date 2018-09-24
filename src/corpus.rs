@@ -1,12 +1,6 @@
 use crate::trie::{Trie};
+use crate::tex_parser::{TexParser};
 use fnv::{FnvHashMap};
-
-#[derive(Eq, PartialEq)]
-enum TexParseMode {
-    Init,
-    Patterns,
-    Exceptions
-}
 
 pub struct Corpus {
     patterns: Trie,
@@ -15,37 +9,11 @@ pub struct Corpus {
 
 impl Corpus {
     pub fn from_tex_file(path: &str) -> Result<Self, std::io::Error> {
-        use std::fs::File;
-        use std::io::{BufReader, prelude::*};
-
-        let file = File::open(path)?;
-        let mut buf_reader = BufReader::new(file);
-        let mut line = String::new();
-        let mut mode = TexParseMode::Init;
-        let mut corpus = Corpus {
+        let corpus = Corpus {
             patterns: Trie::default(),
             exceptions: FnvHashMap::default()
         };
-        while let Ok(len) = buf_reader.read_line(&mut line) {
-            if len == 0 {
-                break;
-            }
-            let tline = line.trim();
-            if tline.starts_with("\\patterns") {
-                mode = TexParseMode::Patterns;
-            } else if tline.starts_with("\\hyphenation") {
-                mode = TexParseMode::Exceptions;
-            } else if tline.starts_with("}") {
-                mode = TexParseMode::Init;
-            } else if mode == TexParseMode::Patterns && !tline.starts_with("#") {
-                corpus.add_pattern(&tline);
-            } else if mode == TexParseMode::Exceptions && !tline.starts_with("#") {
-                corpus.add_exception(&tline);
-            }
-            line.truncate(0);
-        }
-
-        Ok(corpus)
+        TexParser::parse_file(corpus, path)
     }
 
     pub fn add_pattern(&mut self, pattern: &str) {
@@ -62,18 +30,6 @@ impl Corpus {
             }
         }).collect::<Vec<_>>();
         self.exceptions.insert(word.replace("-", ""), indices);
-    }
-
-    pub fn from_file(path: &str) -> Result<Self, std::io::Error> {
-        use std::fs::File;
-        use std::io::{BufReader, prelude::*};
-
-        let file = File::open(path)?;
-        let mut buf_reader = BufReader::new(file);
-        let mut contents = String::new();
-        buf_reader.read_to_string(&mut contents)?;
-
-        Ok(Corpus::from_string(&contents))
     }
 
     pub fn from_string(patterns: &str) -> Self {
@@ -113,13 +69,6 @@ mod tests {
     fn creation_from_string() {
         let corpus = Corpus::from_string(".asdf e3f .ad5g");
         assert_eq!(corpus.get_pattern_count(), 3);
-    }
-
-    #[test]
-    fn creation_from_file() {
-        let corpus = Corpus::from_file("./data/en");
-        assert!(corpus.is_ok());
-        assert_eq!(corpus.unwrap().get_pattern_count(), 4938);
     }
 
     #[test]
