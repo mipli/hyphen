@@ -38,7 +38,7 @@ impl TrieNode {
 
 #[derive(Debug)]
 pub struct Trie {
-    tree: FnvHashMap<char, TrieNode>,
+    root: TrieNode,
     count: usize
 }
 
@@ -53,20 +53,15 @@ impl Trie {
 
     pub fn insert(&mut self, pattern: &str) {
         let chars = pattern.chars().collect::<Vec<_>>();
-        let points = vec![0];
-        let c = chars[0];
         self.count += 1;
-        self.tree.entry(c)
-            .or_insert(TrieNode::new())
-            .insert(&chars[1..], points, true);
+        self.root.insert(&chars, vec![], true);
     }
 
     pub fn fetch(&self, chars: &[char]) -> Vec<usize> {
         use std::cmp::{max};
-        //let chars = pattern.chars().collect::<Vec<_>>();
         let mut points = vec![0; chars.len()];
         for i in 0..chars.len() {
-            let mut t = &self.tree;
+            let mut t = &self.root.tree;
             let _ = chars.iter().skip(i).all(|c| {
                 if let Some(node) =  t.get(&c) {
                     t = &node.tree;
@@ -88,7 +83,7 @@ impl Trie {
 impl Default for Trie {
     fn default() -> Self {
         Trie {
-            tree: FnvHashMap::default(),
+            root: TrieNode::new(),
             count: 0
         }
     }
