@@ -12,21 +12,7 @@ pub trait Hyphenate<'a> {
 
 impl<'a> Hyphenate<'a> for &'a str {
     fn possibilities_word(self, corpus: &Corpus) -> Vec<usize> {
-        if let Some(splits) = corpus.get_exception(self) {
-            return splits.clone();
-        }
-        let mut chars = self.chars().collect::<Vec<_>>();
-        chars.insert(0, '.');
-        chars.push('.');
-        let points = corpus.fetch(&chars);
-
-        points.iter().skip(1).enumerate().filter_map(|(index, p)| {
-            if *p > 0 && p % 2 == 0 {
-                Some(index)
-            } else {
-                None
-            }
-        }).collect::<Vec<_>>()
+        corpus.get_hyphenation_indices(&self)
     }
 
     fn mark_word(self, corpus: &Corpus) -> StandardHyphenator<'a> {
@@ -101,7 +87,10 @@ mod tests {
 
     #[test]
     fn single_word_hyphenation() {
-        let corpus = Corpus::from_string(".as4d8f");
+        let mut corpus = Corpus::from_string(".as4d8f");
+        corpus.min_word_length(1);
+        corpus.right_min(0);
+        corpus.left_min(0);
         let hyphenator = "asdf".mark_word(&corpus);
         let split = hyphenator.hyphenate();
         assert_eq!(split, "as\u{ad}d\u{ad}f");
@@ -109,7 +98,10 @@ mod tests {
 
     #[test]
     fn custom_hyphenation_mark() {
-        let corpus = Corpus::from_string(".asd8f");
+        let mut corpus = Corpus::from_string(".asd8f");
+        corpus.min_word_length(1);
+        corpus.right_min(0);
+        corpus.left_min(0);
         let hyphenator = "asdf".mark_word(&corpus);
         let split = hyphenator.hyphenate_with("<shy></shy>");
         assert_eq!(split, "asd<shy></shy>f");
@@ -117,7 +109,10 @@ mod tests {
 
     #[test]
     fn fulltext_hyphenation() {
-        let corpus = Corpus::from_string(".as4d8f");
+        let mut corpus = Corpus::from_string(".as4d8f");
+        corpus.min_word_length(1);
+        corpus.right_min(0);
+        corpus.left_min(0);
         let hyphenator = "asdf foo asdf".mark(&corpus);
         let split = hyphenator.hyphenate();
         assert_eq!(split, "as\u{ad}d\u{ad}f foo as\u{ad}d\u{ad}f");
@@ -125,7 +120,10 @@ mod tests {
 
     #[test]
     fn negation_hyphenation() {
-        let corpus = Corpus::from_string(".as4df s9d asd4f");
+        let mut corpus = Corpus::from_string(".as4df s9d asd4f");
+        corpus.min_word_length(1);
+        corpus.right_min(0);
+        corpus.left_min(0);
         let hyphenator = "asdf".mark(&corpus);
         assert_eq!(hyphenator.hyphenate(), "asd\u{ad}f");
     }
@@ -133,8 +131,20 @@ mod tests {
     #[test]
     fn exceptions() {
         let mut corpus = Corpus::from_string(".as4df s9d asd4f");
+        corpus.min_word_length(1);
+        corpus.right_min(0);
+        corpus.left_min(0);
         corpus.add_exception("a-sdf");
         let hyphenator = "asdf fasdf".mark(&corpus);
         assert_eq!(hyphenator.hyphenate(), "a\u{ad}sdf fasd\u{ad}f");
+    }
+
+    #[test]
+    fn min_left_and_rigth() {
+        let mut corpus = Corpus::from_string("f4o4ob4a4r");
+        corpus.right_min(2);
+        corpus.left_min(2);
+        let hyphenator = "foobar".mark(&corpus);
+        assert_eq!(hyphenator.hyphenate(), "fo\u{ad}ob\u{ad}ar");
     }
 }
